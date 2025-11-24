@@ -9,6 +9,12 @@ import DetailContent from './DetailContent';
 import Keywords from './Keywords';
 import type { Editor } from '@tiptap/react';
 
+interface Tag {
+  id?: number;
+  name: string;
+  slug?: string;
+}
+
 interface PreviewLayoutProps {
   title: string;
   subtitle?: string;
@@ -18,7 +24,7 @@ interface PreviewLayoutProps {
   author?: string;
   featuredImage?: string;
   editor: Editor | null;
-  tags?: string[];
+  tags?: (string | Tag)[];
   activePath?: string;
   sidebarContent?: React.ReactNode;
 }

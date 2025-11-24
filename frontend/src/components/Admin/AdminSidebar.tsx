@@ -1,4 +1,14 @@
-import { FileText, LayoutDashboard, Settings, Users, Shield, FolderTree, Tag, ChevronDown, ChevronRight, FileSearch } from "lucide-react";
+import {
+  FileText,
+  LayoutDashboard,
+  Users,
+  Shield,
+  FolderTree,
+  Tag,
+  ChevronDown,
+  ChevronRight,
+  FileSearch,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTranslation } from "react-i18next";
@@ -12,7 +22,16 @@ import {
 } from "@/components/ui/collapsible";
 import vietsovLogo from "@/assets/logo/Logo VSP mau moi nhat.png";
 
-export type MenuItemId = "create-article" | "dashboard" | "settings" | "users" | "roles" | "articles" | "categories" | "tags" | "logs";
+export type MenuItemId =
+  | "create-article"
+  | "dashboard"
+  | "settings"
+  | "users"
+  | "roles"
+  | "articles"
+  | "categories"
+  | "tags"
+  | "logs";
 
 interface MenuItem {
   id: MenuItemId;
@@ -32,7 +51,9 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
-  const [openMenus, setOpenMenus] = useState<Set<string>>(new Set(["articles", "system", "settings"]));
+  const [openMenus, setOpenMenus] = useState<Set<string>>(
+    new Set(["articles", "system", "settings"])
+  );
 
   const isAdmin = user?.role?.name === "admin";
 
@@ -50,7 +71,7 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
     },
     {
       id: "articles",
-      label: t("admin.menu.articles", "Quản lý bài báo"),
+      label: t("admin.menu.articles", "Quản lý bài viết"),
       icon: FileText,
       parent: "articles",
     },
@@ -95,7 +116,7 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
     // Navigate based on menu item
     switch (itemId) {
       case "create-article":
-        navigate("/");
+        navigate("/editor");
         break;
       case "dashboard":
         navigate("/dashboard");
@@ -125,7 +146,7 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
 
   // Determine active item from location
   const currentActiveItem =
-    location.pathname === "/"
+    location.pathname === "/editor"
       ? "create-article"
       : location.pathname === "/dashboard"
       ? "dashboard"
@@ -177,7 +198,7 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
         className={cn(
           "w-full justify-start gap-3 h-10",
           collapsed && "justify-center px-0",
-          isActive && "bg-gray-100 font-medium",
+          isActive && "bg-gray-200 font-medium hover:bg-gray-200",
           item.parent && "ml-4"
         )}
         onClick={() => !item.disabled && handleItemClick(item.id)}
@@ -190,7 +211,11 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
     );
   };
 
-  const renderMenuGroup = (groupId: string, title: string, items: MenuItem[]) => {
+  const renderMenuGroup = (
+    groupId: string,
+    title: string,
+    items: MenuItem[]
+  ) => {
     if (items.length === 0) return null;
     if (items.some((item) => item.adminOnly && !isAdmin)) {
       // Check if all items are admin-only and user is not admin
@@ -217,10 +242,7 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
         className="space-y-1"
       >
         <CollapsibleTrigger asChild>
-          <Button
-            variant="ghost"
-            className="w-full justify-between h-10 px-3"
-          >
+          <Button variant="ghost" className="w-full justify-between h-10 px-3">
             <span className="font-medium">{title}</span>
             {isOpen ? (
               <ChevronDown className="h-4 w-4" />
@@ -256,9 +278,21 @@ export function AdminSidebar({ collapsed = false }: AdminSidebarProps) {
 
         {/* Menu Items */}
         <nav className="flex-1 overflow-y-auto p-4 space-y-1">
-          {renderMenuGroup("articles", t("admin.menuGroup.articles", "Bài viết"), articlesItems)}
-          {renderMenuGroup("system", t("admin.menuGroup.system", "Quản trị hệ thống"), systemItems)}
-          {renderMenuGroup("settings", t("admin.menuGroup.settings", "Thiết lập"), settingsItems)}
+          {renderMenuGroup(
+            "articles",
+            t("admin.menuGroup.articles", "Bài viết"),
+            articlesItems
+          )}
+          {renderMenuGroup(
+            "system",
+            t("admin.menuGroup.system", "Quản trị hệ thống"),
+            systemItems
+          )}
+          {renderMenuGroup(
+            "settings",
+            t("admin.menuGroup.settings", "Thiết lập"),
+            settingsItems
+          )}
           {standaloneItems.map(renderMenuItem)}
         </nav>
       </div>

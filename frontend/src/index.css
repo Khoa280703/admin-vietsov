@@ -26,6 +26,21 @@
   --chart-3: 197 37% 24%;
   --chart-4: 43 74% 66%;
   --chart-5: 27 87% 67%;
+
+  /* Vietsov Colors */
+  --color-vietsov-green: #006d38;
+  --color-vietsov-black: #242424;
+  --color-vietsov-blue: #2563eb;
+  --color-vietsov-cyan: #06b6d4;
+  --color-vietsov-gray: #6b7280;
+  --color-vietsov-light-gray: #919296;
+  --color-vietsov-skin: #ebf7f0;
+  --color-vietsov-skin2: #edf8f2;
+  --color-vietsov-green-bold: #014f29;
+  --color-vietsov-yellow: #fad882;
+  --color-pvn-blue: #364185;
+  --color-pvn-green: #009d48;
+  --color-vietsov-green-label: #10954f;
 }
 
 * {
@@ -41,4 +56,34 @@ body {
 
 .bg-vietsov-gradient-green {
   background: linear-gradient(to right, #006d38, #1b8f45, #62bb46);
+}
+
+/* Sonner Toast Success Styling */
+[data-sonner-toast][data-type="success"] {
+  background-color: var(--color-vietsov-green) !important;
+  color: white !important;
+  border-color: var(--color-vietsov-green) !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-description] {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-sonner-toast][data-type="success"] [data-icon] {
+  color: white !important;
+}
+
+/* Sonner Toast Error Styling */
+[data-sonner-toast][data-type="error"] {
+  background-color: #dc2626 !important; /* red-600 */
+  color: white !important;
+  border-color: #dc2626 !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-description] {
+  color: rgba(255, 255, 255, 0.9) !important;
+}
+
+[data-sonner-toast][data-type="error"] [data-icon] {
+  color: white !important;
 }

@@ -40,6 +40,8 @@ export function PreviewMode({ article }: PreviewModeProps) {
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        link: false, // Disable default Link to use custom configured one
+        underline: false, // Disable default Underline to use custom one
       }),
       Table.configure({
         resizable: true,
@@ -118,11 +120,16 @@ export function PreviewMode({ article }: PreviewModeProps) {
     );
   }
 
+  // Get category name from categories array
+  const categoryName = article.categories && article.categories.length > 0 
+    ? article.categories[0].name 
+    : article.category;
+
   return (
     <PreviewLayout
       title={article.title || "Untitled Article"}
       subtitle={article.subtitle}
-      category={article.category}
+      category={categoryName}
       timestamp={
         article.updatedAt
           ? new Date(article.updatedAt).toLocaleDateString("vi-VN")

@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
 import { Loader2, LogIn } from "lucide-react";
 import vietsovLogo from "@/assets/logo/Logo VSP mau moi nhat.png";
+import { getDefaultRoute } from "@/utils/navigation";
 
 const loginSchema = z.object({
   username: z.string().min(1, "Username or email is required"),
@@ -22,7 +23,7 @@ type LoginFormData = z.infer<typeof loginSchema>;
 export function LoginPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  const { login, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { login, isAuthenticated, isLoading: authLoading, user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
 
   const {
@@ -43,15 +44,15 @@ export function LoginPage() {
   }
 
   if (isAuthenticated) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={getDefaultRoute(user)} replace />;
   }
 
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     try {
-      await login(data.username, data.password);
+      const loggedInUser = await login(data.username, data.password);
       toast.success(t("auth.loginSuccess", "Đăng nhập thành công"));
-      navigate("/");
+      navigate(getDefaultRoute(loggedInUser ?? user), { replace: true });
     } catch (error: any) {
       const errorMessage =
         error.response?.data?.error || error.message || t("auth.loginFailed", "Đăng nhập thất bại");
@@ -101,6 +102,7 @@ export function LoginPage() {
               <Input
                 id="password"
                 type="password"
+                autoComplete="current-password"
                 placeholder={t("auth.passwordPlaceholder", "Nhập mật khẩu")}
                 {...register("password")}
                 disabled={isLoading}

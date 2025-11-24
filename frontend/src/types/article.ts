@@ -7,15 +7,17 @@ export type ArticleStatus =
   | "published";
 
 export interface Article {
-  id: number;
+  id: number | string; // Can be number (from server) or string (local draft ID)
   title: string;
   subtitle?: string;
   slug: string;
   excerpt?: string;
+  content?: any; // TipTap JSON content object
   contentJson: string;
   contentHtml?: string;
   status: ArticleStatus;
-  authorId: number;
+  authorId?: number;
+  authorName?: string;
   author?: {
     id: number;
     username: string;

@@ -1,6 +1,6 @@
 {
   "app": {
-    "title": "Trình soạn thảo bài báo",
+    "title": "Trình soạn thảo bài viết",
     "newDraft": "Bài viết mới",
     "save": "Lưu",
     "preview": "Xem trước",
@@ -178,7 +178,7 @@
     "title": "Admin",
     "menu": {
       "createArticle": "Tạo bài viết",
-      "articles": "Quản lý bài báo",
+      "articles": "Quản lý bài viết",
       "dashboard": "Dashboard",
       "settings": "Cài đặt",
       "users": "Quản lý người dùng",
@@ -527,4 +527,3 @@
     "fetchError": "Lỗi khi tải logs"
   }
 }
-

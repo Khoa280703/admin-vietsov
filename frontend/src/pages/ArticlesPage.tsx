@@ -66,7 +66,10 @@ export function ArticlesPage() {
       setArticles(response.data || []);
       setPagination(response.pagination || pagination);
     } catch (error: any) {
-      toast.error(error.response?.data?.error || t("articles.fetchError", "Lỗi khi tải danh sách bài viết"));
+      toast.error(
+        error.response?.data?.error ||
+          t("articles.fetchError", "Lỗi khi tải danh sách bài viết")
+      );
     } finally {
       setLoading(false);
     }
@@ -74,7 +77,14 @@ export function ArticlesPage() {
 
   useEffect(() => {
     fetchArticles();
-  }, [pagination.page, pagination.limit, statusFilter, authorFilter, categoryFilter, tagFilter]);
+  }, [
+    pagination.page,
+    pagination.limit,
+    statusFilter,
+    authorFilter,
+    categoryFilter,
+    tagFilter,
+  ]);
 
   const filteredArticles = useMemo(() => {
     if (!searchTerm) return articles;
@@ -91,7 +101,9 @@ export function ArticlesPage() {
       {
         accessorKey: "id",
         header: "ID",
-        cell: ({ row }) => <div className="font-medium">{row.getValue("id")}</div>,
+        cell: ({ row }) => (
+          <div className="font-medium">{row.getValue("id")}</div>
+        ),
       },
       {
         accessorKey: "title",
@@ -100,30 +112,46 @@ export function ArticlesPage() {
           <div className="max-w-md">
             <div className="font-medium truncate">{row.getValue("title")}</div>
             {row.original.subtitle && (
-              <div className="text-sm text-gray-500 truncate">{row.original.subtitle}</div>
+              <div className="text-sm text-gray-500 truncate">
+                {row.original.subtitle}
+              </div>
             )}
           </div>
         ),
       },
       {
-        accessorKey: "author",
+        accessorKey: "authorName",
         header: t("articles.author", "Tác giả"),
         cell: ({ row }) => {
+          const authorName = row.original.authorName;
           const author = row.original.author;
-          return author ? (
-            <div>
-              <div className="font-medium">{author.fullName || author.username}</div>
-              <div className="text-sm text-gray-500">{author.email}</div>
-            </div>
-          ) : (
-            "-"
-          );
+          // Prefer authorName, fallback to author object
+          if (authorName) {
+            return <div className="font-medium">{authorName}</div>;
+          } else if (author) {
+            return (
+              <div>
+                <div className="font-medium">
+                  {author.fullName || author.username}
+                </div>
+                {author.email && (
+                  <div className="text-sm text-gray-500">{author.email}</div>
+                )}
+              </div>
+            );
+          } else {
+            return "-";
+          }
         },
       },
       {
         accessorKey: "status",
         header: t("articles.statusLabel", "Trạng thái"),
-        cell: ({ row }) => <ArticleStatusBadge status={row.getValue("status") as ArticleStatus} />,
+        cell: ({ row }) => (
+          <ArticleStatusBadge
+            status={row.getValue("status") as ArticleStatus}
+          />
+        ),
       },
       {
         accessorKey: "categories",
@@ -134,7 +162,10 @@ export function ArticlesPage() {
           return (
             <div className="flex flex-wrap gap-1">
               {categories.slice(0, 2).map((cat) => (
-                <span key={cat.id} className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800">
+                <span
+                  key={cat.id}
+                  className="px-2 py-1 text-xs rounded bg-blue-100 text-blue-800"
+                >
                   {cat.name}
                 </span>
               ))}
@@ -156,7 +187,10 @@ export function ArticlesPage() {
           return (
             <div className="flex flex-wrap gap-1">
               {tags.slice(0, 2).map((tag) => (
-                <span key={tag.id} className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800">
+                <span
+                  key={tag.id}
+                  className="px-2 py-1 text-xs rounded bg-purple-100 text-purple-800"
+                >
                   {tag.name}
                 </span>
               ))}
@@ -174,7 +208,9 @@ export function ArticlesPage() {
         header: t("articles.createdAt", "Ngày tạo"),
         cell: ({ row }) => {
           const date = new Date(row.getValue("createdAt"));
-          return <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>;
+          return (
+            <div className="text-sm">{date.toLocaleDateString("vi-VN")}</div>
+          );
         },
       },
       {
@@ -210,7 +246,9 @@ export function ArticlesPage() {
       <div className="flex items-center justify-between mb-6">
         <div className="flex items-center gap-3">
           <FileText className="h-6 w-6" />
-          <h1 className="text-2xl font-bold">{t("articles.title", "Quản lý bài viết")}</h1>
+          <h1 className="text-2xl font-bold">
+            {t("articles.title", "Quản lý bài viết")}
+          </h1>
         </div>
         <Button onClick={() => navigate("/")}>
           <Plus className="mr-2 h-4 w-4" />
@@ -224,7 +262,10 @@ export function ArticlesPage() {
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder={t("articles.searchPlaceholder", "Tìm kiếm bài viết...")}
+              placeholder={t(
+                "articles.searchPlaceholder",
+                "Tìm kiếm bài viết..."
+              )}
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
@@ -233,16 +274,30 @@ export function ArticlesPage() {
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-48">
-            <SelectValue placeholder={t("articles.filterByStatus", "Lọc theo trạng thái")} />
+            <SelectValue
+              placeholder={t("articles.filterByStatus", "Lọc theo trạng thái")}
+            />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">{t("articles.allStatuses", "Tất cả trạng thái")}</SelectItem>
+            <SelectItem value="all">
+              {t("articles.allStatuses", "Tất cả trạng thái")}
+            </SelectItem>
             <SelectItem value="draft">{t("articles.status.draft")}</SelectItem>
-            <SelectItem value="submitted">{t("articles.status.submitted")}</SelectItem>
-            <SelectItem value="under_review">{t("articles.status.under_review")}</SelectItem>
-            <SelectItem value="approved">{t("articles.status.approved")}</SelectItem>
-            <SelectItem value="rejected">{t("articles.status.rejected")}</SelectItem>
-            <SelectItem value="published">{t("articles.status.published")}</SelectItem>
+            <SelectItem value="submitted">
+              {t("articles.status.submitted")}
+            </SelectItem>
+            <SelectItem value="under_review">
+              {t("articles.status.under_review")}
+            </SelectItem>
+            <SelectItem value="approved">
+              {t("articles.status.approved")}
+            </SelectItem>
+            <SelectItem value="rejected">
+              {t("articles.status.rejected")}
+            </SelectItem>
+            <SelectItem value="published">
+              {t("articles.status.published")}
+            </SelectItem>
           </SelectContent>
         </Select>
       </div>
@@ -261,7 +316,10 @@ export function ArticlesPage() {
                     >
                       {header.isPlaceholder
                         ? null
-                        : flexRender(header.column.columnDef.header, header.getContext())}
+                        : flexRender(
+                            header.column.columnDef.header,
+                            header.getContext()
+                          )}
                     </th>
                   ))}
                 </tr>
@@ -270,13 +328,19 @@ export function ArticlesPage() {
             <tbody className="bg-white divide-y divide-gray-200">
               {loading ? (
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     {t("articles.loading", "Đang tải...")}
                   </td>
                 </tr>
               ) : filteredArticles.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length} className="px-4 py-8 text-center text-gray-500">
+                  <td
+                    colSpan={columns.length}
+                    className="px-4 py-8 text-center text-gray-500"
+                  >
                     {t("articles.noArticles", "Không có bài viết nào")}
                   </td>
                 </tr>
@@ -284,8 +348,14 @@ export function ArticlesPage() {
                 table.getRowModel().rows.map((row) => (
                   <tr key={row.id} className="hover:bg-gray-50">
                     {row.getVisibleCells().map((cell) => (
-                      <td key={cell.id} className="px-4 py-3 whitespace-nowrap text-sm">
-                        {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                      <td
+                        key={cell.id}
+                        className="px-4 py-3 whitespace-nowrap text-sm"
+                      >
+                        {flexRender(
+                          cell.column.columnDef.cell,
+                          cell.getContext()
+                        )}
                       </td>
                     ))}
                   </tr>
@@ -299,15 +369,19 @@ export function ArticlesPage() {
       {/* Pagination */}
       <div className="flex items-center justify-between mt-4">
         <div className="text-sm text-gray-500">
-          {t("articles.showing", "Hiển thị")} {pagination.page * pagination.limit - pagination.limit + 1} -{" "}
-          {Math.min(pagination.page * pagination.limit, pagination.total)} {t("articles.of", "của")}{" "}
-          {pagination.total} {t("articles.articles", "bài viết")}
+          {t("articles.showing", "Hiển thị")}{" "}
+          {pagination.page * pagination.limit - pagination.limit + 1} -{" "}
+          {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
+          {t("articles.of", "của")} {pagination.total}{" "}
+          {t("articles.articles", "bài viết")}
         </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
+            onClick={() =>
+              setPagination({ ...pagination, page: pagination.page - 1 })
+            }
             disabled={pagination.page === 1}
           >
             {t("articles.previous", "Trước")}
@@ -315,7 +389,9 @@ export function ArticlesPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
+            onClick={() =>
+              setPagination({ ...pagination, page: pagination.page + 1 })
+            }
             disabled={pagination.page >= pagination.totalPages}
           >
             {t("articles.next", "Sau")}
@@ -325,4 +401,3 @@ export function ArticlesPage() {
     </div>
   );
 }
-

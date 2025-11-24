@@ -164,6 +164,7 @@ export function UserFormDialog({ user, onSuccess, onCancel }: UserFormDialogProp
         <Input
           id="password"
           type="password"
+          autoComplete="new-password"
           {...register("password")}
           disabled={loading}
           className={errors.password ? "border-red-500" : ""}

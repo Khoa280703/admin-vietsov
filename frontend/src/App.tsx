@@ -12,9 +12,16 @@ import { TagsPage } from "./pages/TagsPage";
 import { DashboardPage } from "./pages/DashboardPage";
 import { LogsPage } from "./pages/LogsPage";
 import { Toaster } from "@/components/ui/sonner";
+import { useAuth } from "./hooks/useAuth";
+import { getDefaultRoute } from "./utils/navigation";
 import "./styles/editor.css";
 import "./styles/toolbar.css";
 import "./styles/responsive.css";
+
+function HomeRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={getDefaultRoute(user)} replace />;
+}
 
 function App() {
   return (
@@ -27,7 +34,9 @@ function App() {
             <ProtectedRoute>
               <AdminLayout>
                 <Routes>
-                  <Route path="/" element={<ArticleEditorMain />} />
+                  <Route path="/" element={<HomeRedirect />} />
+                  <Route path="/editor" element={<ArticleEditorMain />} />
+                  <Route path="/articles/:id/edit" element={<ArticleEditorMain />} />
                   <Route path="/dashboard" element={<DashboardPage />} />
                   <Route path="/articles" element={<ArticlesPage />} />
                   <Route
@@ -70,7 +79,7 @@ function App() {
                             </ProtectedRoute>
                           }
                         />
-                        <Route path="*" element={<Navigate to="/" replace />} />
+                  <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </AdminLayout>
             </ProtectedRoute>

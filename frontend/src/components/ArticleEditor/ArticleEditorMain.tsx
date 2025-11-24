@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import type { Article } from "@/types/article";
 import { StorageManager } from "@/utils/storage";
 import { Toolbar } from "@/components/Editor/Toolbar";
@@ -6,6 +7,7 @@ import { MetadataSidebar } from "./MetadataSidebar";
 import { PreviewMode } from "./PreviewMode";
 import { DraftList } from "@/components/DraftManager/DraftList";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { useAutoSave } from "@/hooks/useAutoSave";
 import {
   calculateReadingTime,
@@ -22,6 +24,10 @@ import {
   PanelRightClose,
   FileText,
   Loader2,
+  ArrowLeft,
+  Bot,
+  Send,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -61,8 +67,20 @@ import { FloatingMenuBar } from "@/components/Editor/FloatingMenuBar";
 import { generateSlug } from "@/utils/validation";
 import api from "@/services/api";
 
+type AiMessage = {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: string;
+  summary?: string;
+  error?: boolean;
+};
+
 export function ArticleEditorMain() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
+  const { id: articleIdParam } = useParams<{ id: string }>();
+  const [loading, setLoading] = useState(false);
   const [article, setArticle] = useState<Partial<Article>>(() => {
     const id = StorageManager.generateId();
     return {
@@ -88,6 +106,15 @@ export function ArticleEditorMain() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [showAiAssistant, setShowAiAssistant] = useState(false);
+  const [aiMessages, setAiMessages] = useState<AiMessage[]>([]);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [isAiProcessing, setIsAiProcessing] = useState(false);
+
+  const generateMessageId = () =>
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
 
   const lowlight = createLowlight(common);
 
@@ -95,6 +122,10 @@ export function ArticleEditorMain() {
     extensions: [
       StarterKit.configure({
         codeBlock: false,
+        link: false, // Disable default Link to use custom configured one
+        underline: false, // Disable default Underline to use custom one
+        gapcursor: false, // Disable default Gapcursor to use custom one
+        dropcursor: false, // Disable default Dropcursor to use custom one
       }),
       Table.configure({
         resizable: true,
@@ -191,6 +222,119 @@ export function ArticleEditorMain() {
 
   const { forceSave } = useAutoSave(article, { enabled: true });
 
+  // Prevent body scroll when in editor
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, []);
+
+  // Load article from API when editing existing article
+  useEffect(() => {
+    const loadArticle = async () => {
+      if (!articleIdParam) return;
+
+      const articleId = parseInt(articleIdParam);
+      if (isNaN(articleId)) {
+        toast.error(t("articles.invalidId", "ID bài viết không hợp lệ"));
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await api.articles.getById(articleId);
+        const articleData = response.data;
+
+        if (!articleData) {
+          toast.error(t("articles.notFound", "Không tìm thấy bài viết"));
+          return;
+        }
+
+        // Parse contentJson to content object
+        let content = { type: "doc", content: [] };
+        if (articleData.contentJson) {
+          try {
+            content =
+              typeof articleData.contentJson === "string"
+                ? JSON.parse(articleData.contentJson)
+                : articleData.contentJson;
+          } catch (e) {
+            console.error("Error parsing contentJson:", e);
+            // If parsing fails, try to load from contentHtml
+            if (articleData.contentHtml) {
+              // Will be loaded into editor as HTML
+              content = articleData.contentHtml;
+            }
+          }
+        }
+
+        // Map API response to article state
+        const mappedArticle: Partial<Article> = {
+          id: articleData.id,
+          title: articleData.title || "",
+          subtitle: articleData.subtitle,
+          slug: articleData.slug || "",
+          excerpt: articleData.excerpt,
+          content: content,
+          contentJson:
+            typeof articleData.contentJson === "string"
+              ? articleData.contentJson
+              : JSON.stringify(articleData.contentJson || {}),
+          contentHtml: articleData.contentHtml,
+          status: articleData.status || "draft",
+          authorName: articleData.authorName,
+          featuredImage: articleData.featuredImage,
+          seoTitle: articleData.seoTitle,
+          seoDescription: articleData.seoDescription,
+          seoKeywords: articleData.seoKeywords,
+          isFeatured: articleData.isFeatured || false,
+          isBreakingNews: articleData.isBreakingNews || false,
+          allowComments: articleData.allowComments ?? true,
+          visibility: articleData.visibility || "web,mobile",
+          scheduledAt: articleData.scheduledAt,
+          publishedAt: articleData.publishedAt,
+          reviewNotes: articleData.reviewNotes,
+          wordCount: articleData.wordCount || 0,
+          characterCount: articleData.characterCount || 0,
+          readingTime: articleData.readingTime || 0,
+          views: articleData.views || 0,
+          createdAt: articleData.createdAt,
+          updatedAt: articleData.updatedAt,
+          categories: articleData.categories || [],
+          tags: articleData.tags || [],
+        };
+
+        setArticle(mappedArticle);
+
+        // Load content into editor
+        if (editor) {
+          if (typeof content === "string") {
+            // HTML content
+            editor.commands.setContent(content);
+          } else if (content && typeof content === "object") {
+            // JSON content
+            editor.commands.setContent(content);
+          }
+        }
+      } catch (error: unknown) {
+        console.error("Error loading article:", error);
+        const errorMessage =
+          error && typeof error === "object" && "response" in error
+            ? (error as { response?: { data?: { error?: string } } }).response
+                ?.data?.error
+            : undefined;
+        toast.error(
+          errorMessage || t("articles.loadError", "Lỗi khi tải bài viết")
+        );
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadArticle();
+  }, [articleIdParam, editor, t]);
+
   const handleUpdateArticle = (updates: Partial<Article>) => {
     setArticle((prev) => ({
       ...prev,
@@ -256,6 +400,118 @@ export function ArticleEditorMain() {
     readingTime: article.readingTime || 0,
   };
 
+  const buildHistoryPayload = (messages: AiMessage[]) =>
+    messages.map((msg) => ({
+      role: msg.role === "assistant" ? "model" : "user",
+      content: msg.content,
+    }));
+
+  const applyAiContent = (jsonString: string) => {
+    if (!editor) return;
+    const parsed = JSON.parse(jsonString);
+    editor.commands.setContent(parsed);
+    setArticle((prev) => ({
+      ...prev,
+      content: parsed,
+      contentJson: jsonString,
+      updatedAt: new Date().toISOString(),
+    }));
+  };
+
+  const handleSendAiPrompt = async () => {
+    if (!aiPrompt.trim()) {
+      toast.info(t("editor.aiPromptRequired", "Nhập yêu cầu cho AI trước."));
+      return;
+    }
+
+    if (!editor) {
+      toast.error(
+        t("editor.aiEditorUnavailable", "Editor chưa sẵn sàng để cập nhật.")
+      );
+      return;
+    }
+
+    const promptText = aiPrompt.trim();
+    setAiPrompt("");
+
+    const userMessage: AiMessage = {
+      id: generateMessageId(),
+      role: "user",
+      content: promptText,
+      timestamp: new Date().toISOString(),
+    };
+
+    setAiMessages((prev) => [...prev, userMessage]);
+    setIsAiProcessing(true);
+
+    try {
+      const currentJson = JSON.stringify(editor.getJSON());
+      const historyPayload = buildHistoryPayload([...aiMessages, userMessage]);
+      const data = await api.ai.generateContent({
+        prompt: promptText,
+        contentJson: currentJson,
+        history: historyPayload,
+      });
+
+      const assistantMessage: AiMessage = {
+        id: generateMessageId(),
+        role: "assistant",
+        content:
+          data.summary ||
+          data.rawText ||
+          t("editor.aiDefaultSummary", "AI đã xử lý yêu cầu của bạn."),
+        summary: data.summary,
+        timestamp: new Date().toISOString(),
+      };
+
+      if (data.updatedContentJson) {
+        try {
+          applyAiContent(data.updatedContentJson);
+          toast.success(t("editor.aiApplied", "AI đã cập nhật nội dung"));
+        } catch (jsonError) {
+          console.error("Failed to apply AI content", jsonError);
+          assistantMessage.error = true;
+          assistantMessage.content = t(
+            "editor.aiInvalidJson",
+            "Không thể áp dụng nội dung do AI trả về."
+          );
+          toast.error(
+            t("editor.aiInvalidJsonDetail", "AI trả về JSON không hợp lệ")
+          );
+        }
+      } else {
+        toast.info(
+          t("editor.aiNoJson", "AI không trả về nội dung mới để áp dụng")
+        );
+      }
+
+      setAiMessages((prev) => [...prev, assistantMessage]);
+    } catch (error: any) {
+      const errorText =
+        error?.response?.data?.error ||
+        error?.message ||
+        t("editor.aiFailed", "Không thể gọi AI, vui lòng thử lại");
+      toast.error(errorText);
+      setAiMessages((prev) => [
+        ...prev,
+        {
+          id: generateMessageId(),
+          role: "assistant",
+          content: errorText,
+          timestamp: new Date().toISOString(),
+          error: true,
+        },
+      ]);
+    } finally {
+      setIsAiProcessing(false);
+    }
+  };
+
+  const handleResetAiHistory = () => {
+    setAiMessages([]);
+    toast.info(t("editor.aiHistoryCleared", "Đã xoá lịch sử trò chuyện AI"));
+  };
+
   const handlePublish = async () => {
     setPublishMessage(null);
 
@@ -279,78 +535,111 @@ export function ArticleEditorMain() {
 
     const contentNode = article.content ?? { type: "doc", content: [] };
     const contentJson =
-      typeof contentNode === "string"
-        ? JSON.parse(contentNode)
-        : contentNode;
+      typeof contentNode === "string" ? JSON.parse(contentNode) : contentNode;
 
     setIsPublishing(true);
     try {
-      forceSave();
+      // Don't call forceSave here as it shows a toast notification
+      // We'll save directly to server instead
+      // forceSave();
 
       // Create or update article first
-      let articleId = article.id;
-      if (articleId && typeof articleId === "string") {
-        // Update existing article
-        await api.articles.update(parseInt(articleId), {
+      let articleId: number | undefined;
+
+      // Check if article has a valid numeric ID (from server)
+      if (article.id && typeof article.id === "number") {
+        // Update existing article from server
+        articleId = article.id;
+        await api.articles.update(articleId, {
           title: article.title,
           subtitle: article.subtitle,
           slug,
           excerpt: article.excerpt,
           content: contentJson,
+          authorName: article.authorName,
           featuredImage: article.featuredImage,
           seoTitle: article.seoTitle || article.title,
-          seoDescription: article.metaDescription || article.excerpt,
-          seoKeywords: article.seoKeywords || article.tags?.join(", "),
+          seoDescription: article.seoDescription || article.excerpt,
+          seoKeywords:
+            article.seoKeywords ||
+            article.tags
+              ?.map((t) => (typeof t === "string" ? t : t.name))
+              .join(", "),
+          status: article.status || "draft", // Ensure status is always sent
           isFeatured: article.isFeatured ?? false,
           isBreakingNews: article.isBreakingNews ?? false,
           allowComments: article.allowComments ?? true,
           visibility: article.visibility || "web,mobile",
-          scheduledAt: article.scheduledDate,
-          categoryIds: article.categoryId ? [article.categoryId] : [],
-          tagIds: article.tags?.map((tag) => tag) || [],
+          scheduledAt: article.scheduledAt,
+          categoryIds:
+            article.categories
+              ?.map((cat) => cat.id)
+              .filter((id) => id !== undefined) || [],
+          tagIds:
+            article.tags
+              ?.map((tag) => (typeof tag === "object" ? tag.id : undefined))
+              .filter((id) => id !== undefined) || [],
         });
       } else {
-        // Create new article
+        // Create new article (draft ID or no ID)
         const response = await api.articles.create({
           title: article.title,
           subtitle: article.subtitle,
           slug,
           excerpt: article.excerpt,
           content: contentJson,
+          authorName: article.authorName,
           featuredImage: article.featuredImage,
           seoTitle: article.seoTitle || article.title,
-          seoDescription: article.metaDescription || article.excerpt,
-          seoKeywords: article.seoKeywords || article.tags?.join(", "),
+          seoDescription: article.seoDescription || article.excerpt,
+          seoKeywords:
+            article.seoKeywords ||
+            article.tags
+              ?.map((t) => (typeof t === "string" ? t : t.name))
+              .join(", "),
           isFeatured: article.isFeatured ?? false,
           isBreakingNews: article.isBreakingNews ?? false,
           allowComments: article.allowComments ?? true,
           visibility: article.visibility || "web,mobile",
-          scheduledAt: article.scheduledDate,
-          categoryIds: article.categoryId ? [article.categoryId] : [],
-          tagIds: article.tags?.map((tag) => tag) || [],
+          scheduledAt: article.scheduledAt,
+          categoryIds:
+            article.categories
+              ?.map((cat) => cat.id)
+              .filter((id) => id !== undefined) || [],
+          tagIds:
+            article.tags
+              ?.map((tag) => (typeof tag === "object" ? tag.id : undefined))
+              .filter((id) => id !== undefined) || [],
         });
         articleId = response.data.id;
       }
 
-      // Publish the article
-      if (typeof articleId === "number") {
-        await api.articles.publish(articleId);
-      } else {
-        throw new Error("Invalid article ID");
-      }
-
-      const successText = t("editor.publishSuccess");
+      // Save article (keep current status, don't auto-publish)
+      const successText = t("editor.saveSuccess", "Lưu bài viết thành công");
       toast.success(successText);
       setPublishMessage({ type: "success", text: successText });
+
+      // Update article state with saved data (keep current status, don't reload from server)
       setArticle((prev) => ({
         ...prev,
         id: articleId,
-        status: "published",
+        // Keep current status, don't change it
+        status: prev.status || "draft", // Ensure status is preserved
         slug,
         updatedAt: new Date().toISOString(),
       }));
-    } catch (error: any) {
-      const errorText = error.response?.data?.error || error.message || t("editor.publishFailed");
+    } catch (error: unknown) {
+      const errorObj =
+        error && typeof error === "object" && "response" in error
+          ? (error as {
+              response?: { data?: { error?: string } };
+              message?: string;
+            })
+          : null;
+      const errorText =
+        errorObj?.response?.data?.error ||
+        errorObj?.message ||
+        t("editor.publishFailed");
       toast.error(errorText);
       setPublishMessage({ type: "error", text: errorText });
     } finally {
@@ -359,7 +648,7 @@ export function ArticleEditorMain() {
   };
 
   return (
-    <div className="flex h-screen bg-white">
+    <div className="flex fixed inset-0 bg-white z-50">
       {/* Draft Panel */}
       {showDraftPanel && (
         <div className="w-80 border-r bg-white overflow-hidden flex flex-col">
@@ -377,7 +666,9 @@ export function ArticleEditorMain() {
             </Button>
           </div>
           <DraftList
-            currentDraftId={article.id}
+            currentDraftId={
+              typeof article.id === "string" ? article.id : undefined
+            }
             onLoadDraft={handleLoadDraft}
             onNewDraft={handleNewDraft}
           />
@@ -386,9 +677,29 @@ export function ArticleEditorMain() {
 
       {/* Main Editor Area */}
       <div className="flex-1 flex flex-col">
+        {/* Loading Indicator */}
+        {loading && (
+          <div className="absolute inset-0 bg-white/80 flex items-center justify-center z-50">
+            <div className="flex flex-col items-center gap-2">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm text-muted-foreground">
+                {t("articles.loading", "Đang tải bài viết...")}
+              </p>
+            </div>
+          </div>
+        )}
+
         {/* Top Bar */}
         <div className="border-b bg-white px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2">
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => navigate("/articles")}
+              title={t("common.back", "Quay lại")}
+            >
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
             {!showDraftPanel && (
               <Button
                 size="icon"
@@ -402,6 +713,19 @@ export function ArticleEditorMain() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Button
+              variant={showAiAssistant ? "default" : "outline"}
+              size="sm"
+              onClick={() => setShowAiAssistant((prev) => !prev)}
+              className={
+                showAiAssistant
+                  ? "bg-[var(--color-vietsov-green)] text-white hover:!bg-[var(--color-vietsov-green-bold)]"
+                  : ""
+              }
+            >
+              <Bot className="h-4 w-4 mr-2" />
+              {t("editor.aiAssistant", "AI trợ lý")}
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -421,16 +745,27 @@ export function ArticleEditorMain() {
                 </>
               )}
             </Button>
-            <Button size="sm" onClick={handlePublish} disabled={isPublishing}>
+            <Button
+              size="sm"
+              onClick={handlePublish}
+              disabled={isPublishing}
+              style={{
+                backgroundColor: isPublishing
+                  ? undefined
+                  : "var(--color-vietsov-green)",
+                color: "white",
+              }}
+              className="hover:!bg-[var(--color-vietsov-green-bold)] disabled:opacity-50"
+            >
               {isPublishing ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {t("editor.publishing")}
+                  {t("editor.saving", "Đang lưu...")}
                 </>
               ) : (
                 <>
-                  <FileText className="h-4 w-4 mr-2" />
-                  {t("editor.publish")}
+                  <Save className="h-4 w-4 mr-2" />
+                  {t("common.save", "Lưu")}
                 </>
               )}
             </Button>
@@ -521,6 +856,141 @@ export function ArticleEditorMain() {
                 onUpdate={handleUpdateArticle}
                 stats={stats}
               />
+            </div>
+          )}
+
+          {/* AI Assistant Panel */}
+          {showAiAssistant && (
+            <div className="w-96 border-l bg-white overflow-hidden flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b">
+                <div className="flex items-center gap-2 font-semibold">
+                  <Sparkles className="h-4 w-4 text-[var(--color-vietsov-green)]" />
+                  {t("editor.aiAssistant", "AI trợ lý")}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    title={t("editor.aiClearHistory", "Xoá lịch sử")}
+                    onClick={handleResetAiHistory}
+                    disabled={aiMessages.length === 0}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    onClick={() => setShowAiAssistant(false)}
+                    title={t("common.close", "Đóng")}
+                  >
+                    <PanelLeftClose className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-4 space-y-3">
+                {aiMessages.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    {t(
+                      "editor.aiEmptyState",
+                      'Hãy mô tả yêu cầu (ví dụ: "viết đoạn mở bài về biến đổi khí hậu"). AI sẽ chỉnh sửa nội dung trực tiếp.'
+                    )}
+                  </div>
+                ) : (
+                  aiMessages.map((msg) => {
+                    const isUser = msg.role === "user";
+                    const bubbleClass = msg.error
+                      ? "border border-red-200 bg-red-50 text-red-900"
+                      : isUser
+                      ? "border bg-white text-[var(--color-vietsov-green-bold)]"
+                      : "border border-gray-200 bg-gray-50 text-gray-900";
+                    const bubbleStyle =
+                      !msg.error && isUser
+                        ? {
+                            borderColor: "var(--color-vietsov-green)",
+                            backgroundColor: "var(--color-vietsov-skin)",
+                            color: "var(--color-vietsov-green-bold)",
+                          }
+                        : undefined;
+
+                    return (
+                      <div
+                        key={msg.id}
+                        className={`rounded-lg p-3 text-sm shadow-sm ${bubbleClass}`}
+                        style={bubbleStyle}
+                      >
+                        <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                          <span className="font-semibold">
+                            {isUser
+                              ? t("editor.you", "Bạn")
+                              : t("editor.aiLabel", "AI")}
+                          </span>
+                          <span>
+                            {new Date(msg.timestamp).toLocaleTimeString(
+                              "vi-VN",
+                              {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              }
+                            )}
+                          </span>
+                        </div>
+                        <p className="whitespace-pre-wrap leading-relaxed">
+                          {msg.content}
+                        </p>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="border-t p-3 space-y-2">
+                <Textarea
+                  placeholder={t(
+                    "editor.aiPromptPlaceholder",
+                    'Ví dụ: "Viết lại đoạn này ngắn gọn hơn"'
+                  )}
+                  value={aiPrompt}
+                  onChange={(e) => setAiPrompt(e.target.value)}
+                  rows={3}
+                  disabled={isAiProcessing}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Enter" &&
+                      (event.metaKey || event.ctrlKey)
+                    ) {
+                      event.preventDefault();
+                      handleSendAiPrompt();
+                    }
+                  }}
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>
+                    {t(
+                      "editor.aiDisclaimer",
+                      "Kết quả AI cần được bạn rà soát lại."
+                    )}
+                  </span>
+                  <Button
+                    size="sm"
+                    onClick={handleSendAiPrompt}
+                    disabled={isAiProcessing}
+                    className="bg-[var(--color-vietsov-green)] text-white hover:bg-[var(--color-vietsov-green-bold)]"
+                  >
+                    {isAiProcessing ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        {t("common.processing", "Đang xử lý")}
+                      </>
+                    ) : (
+                      <>
+                        <Send className="h-4 w-4 mr-2" />
+                        {t("common.send", "Gửi")}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </div>
             </div>
           )}
         </div>

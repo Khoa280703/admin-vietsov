@@ -1,7 +1,13 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
 import api from "@/services/api";
 
-interface User {
+export interface AuthUser {
   id: number;
   username: string;
   email: string;
@@ -17,10 +23,10 @@ interface User {
 }
 
 interface AuthContextType {
-  user: User | null;
+  user: AuthUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<AuthUser | null>;
   logout: () => void;
   checkAuth: () => Promise<void>;
 }
@@ -28,7 +34,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   const checkAuth = async () => {
@@ -62,7 +68,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await api.auth.login(username, password);
       if (response.user) {
         setUser(response.user);
+        return response.user;
       }
+      return null;
     } catch (error) {
       throw error;
     }
@@ -100,4 +108,3 @@ export function useAuth() {
   }
   return context;
 }
-

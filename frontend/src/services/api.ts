@@ -140,6 +140,17 @@ class ApiClient {
     },
   };
 
+  ai = {
+    generateContent: async (data: {
+      prompt: string;
+      contentJson: string;
+      history?: Array<{ role: string; content: string }>;
+    }) => {
+      const response = await this.client.post("/ai/content", data);
+      return response.data;
+    },
+  };
+
   // Categories endpoints
   categories = {
     list: async (type?: string) => {
