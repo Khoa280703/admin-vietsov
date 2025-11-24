@@ -350,7 +350,6 @@ export function ArticleEditorMain() {
         updatedAt: new Date().toISOString(),
       }));
     } catch (error: any) {
-      console.error("Publish error:", error);
       const errorText = error.response?.data?.error || error.message || t("editor.publishFailed");
       toast.error(errorText);
       setPublishMessage({ type: "error", text: errorText });
@@ -407,18 +406,6 @@ export function ArticleEditorMain() {
               variant="outline"
               size="sm"
               onClick={() => {
-                if (!isPreviewMode) {
-                  // Log content when entering preview mode
-                  console.log("=== Preview Content ===", {
-                    content: article.content,
-                    isJSON: typeof article.content === "object",
-                    isString: typeof article.content === "string",
-                    jsonString:
-                      typeof article.content === "object"
-                        ? JSON.stringify(article.content, null, 2)
-                        : article.content,
-                  });
-                }
                 setIsPreviewMode(!isPreviewMode);
               }}
             >

@@ -124,10 +124,9 @@ export function Toolbar({ editor, onFullscreen }: ToolbarProps) {
       try {
         const base64 = await compressImage(file);
         editor.chain().focus().setImage({ src: base64 }).run();
-      } catch (error) {
-        console.error("Error uploading image:", error);
-        toast.error(t("editor.imageUploadFailed"));
-      }
+        } catch (error) {
+          toast.error(t("editor.imageUploadFailed"));
+        }
     };
     input.click();
   };

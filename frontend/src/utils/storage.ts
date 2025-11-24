@@ -137,7 +137,6 @@ export class StorageManager {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
       this.updateMetadata(article);
     } catch (error) {
-      console.error("Error saving draft:", error);
       throw new Error("Failed to save draft");
     }
   }
@@ -147,7 +146,6 @@ export class StorageManager {
       const drafts = this.getAllDrafts();
       return drafts.find((d) => d.id === id) || null;
     } catch (error) {
-      console.error("Error getting draft:", error);
       return null;
     }
   }
@@ -157,7 +155,6 @@ export class StorageManager {
       const data = localStorage.getItem(STORAGE_KEY);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error("Error getting all drafts:", error);
       return [];
     }
   }
@@ -168,7 +165,6 @@ export class StorageManager {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(drafts));
       this.deleteMetadata(id);
     } catch (error) {
-      console.error("Error deleting draft:", error);
       throw new Error("Failed to delete draft");
     }
   }
@@ -189,7 +185,6 @@ export class StorageManager {
       this.saveDraft(duplicate);
       return duplicate;
     } catch (error) {
-      console.error("Error duplicating draft:", error);
       return null;
     }
   }
@@ -199,7 +194,6 @@ export class StorageManager {
       const data = localStorage.getItem(METADATA_KEY);
       return data ? JSON.parse(data) : [];
     } catch (error) {
-      console.error("Error getting metadata:", error);
       return [];
     }
   }
@@ -220,7 +214,6 @@ export class StorageManager {
           .trim()
           .substring(0, 150);
       } catch (error) {
-        console.error("Error generating preview text:", error);
         preview = "Content preview unavailable";
       }
     }
@@ -281,7 +274,6 @@ export class StorageManager {
       try {
         markdown += extractTextFromJSON(article.content as JSONContent).trim();
       } catch (error) {
-        console.error("Error generating markdown from JSON:", error);
         markdown += "Content conversion error";
       }
     }
@@ -300,7 +292,6 @@ export class StorageManager {
       try {
         contentHTML = generateHTML(article.content as JSONContent, extensions);
       } catch (error) {
-        console.error("Error generating HTML from JSON:", error);
         contentHTML = "<p>Content conversion error</p>";
       }
     }

@@ -60,7 +60,7 @@ export function useAutoSave(
           lastSaveRef.current = currentContent;
         }
       } catch (error) {
-        console.error('Auto-save failed:', error);
+        // Silently fail for auto-save to avoid interrupting user
       }
     };
 
@@ -113,7 +113,6 @@ export function useAutoSave(
         lastSaveRef.current = JSON.stringify(article);
         toast.success('Draft saved');
       } catch (error) {
-        console.error('Manual save failed:', error);
         toast.error('Failed to save draft');
       }
     }

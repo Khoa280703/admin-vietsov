@@ -9,13 +9,16 @@ public class RequestLoggingMiddleware
 {
     private readonly RequestDelegate _next;
     private readonly ILogger<RequestLoggingMiddleware> _logger;
+    private readonly IServiceProvider _serviceProvider;
 
     public RequestLoggingMiddleware(
         RequestDelegate next,
-        ILogger<RequestLoggingMiddleware> logger)
+        ILogger<RequestLoggingMiddleware> logger,
+        IServiceProvider serviceProvider)
     {
         _next = next;
         _logger = logger;
+        _serviceProvider = serviceProvider;
     }
 
     public async Task InvokeAsync(HttpContext context)
@@ -33,6 +36,26 @@ public class RequestLoggingMiddleware
 
         var startTime = DateTime.UtcNow;
 
+        // Capture all needed data BEFORE response is sent (to avoid ObjectDisposedException)
+        int? userId = null;
+        try
+        {
+            var userIdClaim = context.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedUserId))
+            {
+                userId = parsedUserId;
+            }
+        }
+        catch
+        {
+            // User context may not be available, ignore
+        }
+
+        var ipAddress = GetClientIp(context);
+        var userAgent = context.Request.Headers["User-Agent"].ToString();
+        var method = context.Request.Method;
+        var queryDict = context.Request.Query.ToDictionary(q => q.Key, q => q.Value.ToString());
+
         // Capture response
         context.Response.OnCompleted(() =>
         {
@@ -41,42 +64,34 @@ public class RequestLoggingMiddleware
                 var duration = (int)(DateTime.UtcNow - startTime).TotalMilliseconds;
                 var statusCode = context.Response.StatusCode;
 
-                // Get user ID from claims
-                int? userId = null;
-                var userIdClaim = context.User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
-                if (!string.IsNullOrEmpty(userIdClaim) && int.TryParse(userIdClaim, out var parsedUserId))
-                {
-                    userId = parsedUserId;
-                }
-
                 var logData = new LogData
                 {
                     UserId = userId,
-                    Action = ExtractAction(context.Request.Method, path),
+                    Action = ExtractAction(method, path),
                     Module = ExtractModule(path),
                     Endpoint = path,
-                    Method = context.Request.Method,
+                    Method = method,
                     StatusCode = statusCode,
-                    IpAddress = GetClientIp(context),
-                    UserAgent = context.Request.Headers["User-Agent"].ToString(),
-                    Message = $"{context.Request.Method} {path} - {statusCode} ({duration}ms)",
+                    IpAddress = ipAddress,
+                    UserAgent = userAgent,
+                    Message = $"{method} {path} - {statusCode} ({duration}ms)",
                     Level = GetLogLevel(statusCode),
                     Metadata = new
                     {
                         duration,
-                        query = context.Request.Query.ToDictionary(q => q.Key, q => q.Value.ToString())
+                        query = queryDict
                         // Note: Body is not available in OnCompleted callback
                     }
                 };
 
                 // Write log asynchronously (don't block)
-                // Create a scope to resolve scoped services
+                // Use root service provider (injected via constructor) instead of context.RequestServices
                 _ = Task.Run(async () =>
                 {
                     try
                     {
-                        // Create a scope to resolve ILogService (scoped service)
-                        using var scope = context.RequestServices.CreateScope();
+                        // Create a scope from the root service provider (not from disposed context)
+                        using var scope = _serviceProvider.CreateScope();
                         var logService = scope.ServiceProvider.GetRequiredService<ILogService>();
                         await logService.WriteLogAsync(logData).ConfigureAwait(false);
                     }

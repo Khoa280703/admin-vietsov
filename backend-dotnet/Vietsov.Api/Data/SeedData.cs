@@ -62,9 +62,9 @@ public class SeedData
 
             // Create Admin User
             logger.LogInformation("Creating admin user...");
-            var adminUsername = configuration["Admin:Username"] ?? "admin";
-            var adminPassword = configuration["Admin:Password"] ?? "admin123";
-            var adminEmail = configuration["Admin:Email"] ?? "admin@vietsov.com";
+            var adminUsername = configuration["AdminUser:Username"] ?? configuration["Admin:Username"] ?? "admin";
+            var adminPassword = configuration["AdminUser:Password"] ?? configuration["Admin:Password"] ?? "Admin123";
+            var adminEmail = configuration["AdminUser:Email"] ?? configuration["Admin:Email"] ?? "admin@vietsov.com";
 
             var adminUser = await userManager.FindByNameAsync(adminUsername);
             if (adminUser == null)
@@ -125,14 +125,6 @@ public class SeedData
 
                     if (insertedCategory != null)
                     {
-                        var categoryId = insertedCategory.Id;
-
-                        // Insert self-reference into closure table
-                        await context.Database.ExecuteSqlRawAsync(
-                            @"INSERT INTO categories_closure (id_ancestor, id_descendant) VALUES (@id, @id)",
-                            new SqlParameter("@id", categoryId)
-                        );
-
                         logger.LogInformation($"Category created: {catData.Name}");
                     }
                 }

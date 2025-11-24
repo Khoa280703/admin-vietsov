@@ -45,7 +45,7 @@ export function LogsPage() {
       const data = await api.logs.getStats();
       setStats(data);
     } catch (error: any) {
-      console.error("Failed to fetch log statistics:", error);
+      // Silently fail - statistics are optional
     }
   };
 

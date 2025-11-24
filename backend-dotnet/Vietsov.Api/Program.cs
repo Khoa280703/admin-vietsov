@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.Json;
 using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
@@ -13,6 +14,7 @@ using Vietsov.Api.Data;
 using Vietsov.Api.Middleware;
 using Vietsov.Api.Models;
 using Vietsov.Api.Services;
+using Vietsov.Api.Utils;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,7 +26,14 @@ Serilog.Log.Logger = new LoggerConfiguration()
 builder.Host.UseSerilog();
 
 // Add services to the container
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        // Configure JSON serialization for ArticleStatus enum
+        options.JsonSerializerOptions.Converters.Add(new ArticleStatusJsonConverter());
+        // Use camelCase for property names
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 
 // Configure Entity Framework Core
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
@@ -232,16 +241,17 @@ try
         var configuration = services.GetRequiredService<IConfiguration>();
         var seedLogger = services.GetRequiredService<ILogger<SeedData>>();
 
-        // Try to ensure database is created (may fail if DB is not accessible)
+        // Try to apply pending migrations and seed data
         try
         {
-            await context.Database.EnsureCreatedAsync();
+            // Apply pending migrations (will skip if already applied)
+            await context.Database.MigrateAsync();
             // Seed data only if database is accessible
             await SeedData.SeedAsync(context, userManager, roleManager, configuration, seedLogger);
         }
         catch (Exception dbEx)
         {
-            seedLogger.LogWarning(dbEx, "Database connection failed during seeding. This is OK if database is not yet configured. Continuing startup...");
+            seedLogger.LogWarning(dbEx, "Database migration or seeding failed. This is OK if database is not yet configured. Continuing startup...");
         }
     }
 }

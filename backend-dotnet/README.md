@@ -1,30 +1,8 @@
 # Vietsov API - .NET 8.0 Backend
 
-## Migration Status
+## Overview
 
-### ✅ Completed
-
-- Project setup với .NET 8.0
-- Entity Framework Core với SQL Server
-- ASP.NET Core Identity + JWT Authentication
-- Serilog logging configuration
-- API Versioning setup
-- CORS configuration
-- Swagger/OpenAPI setup
-- Models: ApplicationUser, ApplicationRole, Article, Category, Tag, Log, ArticleCategory, ArticleTag
-- DbContext với relationships và indexes
-- JWT Service
-- AuthController (login, refresh, me)
-- Initial migration created
-
-### 🔄 In Progress / TODO
-
-- Services: ArticleService, CategoryService, TagService, UploadService, DashboardService, LogService
-- Controllers: UsersController, RolesController, ArticlesController, CategoriesController, TagsController, UploadController, DashboardController, LogsController
-- Middleware: RequestLoggingMiddleware, GlobalExceptionHandler
-- Validators: FluentValidation validators cho các DTOs
-- Seed Data: Admin user và roles
-- Testing: Test tất cả endpoints
+ASP.NET Core 8.0 backend API với Entity Framework Core, ASP.NET Core Identity, JWT Authentication, và full CRUD operations cho Articles, Categories, Tags, Users, Roles, và Logs.
 
 ## Setup Instructions
 
@@ -33,7 +11,7 @@
 ```json
 {
   "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=test_post;User Id=sa;Password=YourPassword123!;TrustServerCertificate=True;Encrypt=False;"
+    "DefaultConnection": "Server=localhost,1433;Database=test_post;User Id=sa;Password=YourStrong@Passw0rd;TrustServerCertificate=True;Encrypt=False;"
   }
 }
 ```
@@ -67,7 +45,7 @@ dotnet run
 
 **Note**:
 
-- Default port is 5000 (HTTP) and 5001 (HTTPS) to avoid conflict with Node.js backend on port 3000
+- Default port is 5000 (HTTP) and 5001 (HTTPS)
 - If you see a warning about "No XML encryptor configured" in development, this is normal and can be ignored. In production, you should configure proper key encryption.
 
 ## Project Structure
@@ -94,15 +72,19 @@ Vietsov.Api/
 └── appsettings.json # Configuration file
 ```
 
-## Next Steps
+## Features
 
-1. Implement remaining services
-2. Implement remaining controllers
-3. Add middleware for request logging and error handling
-4. Add FluentValidation validators
-5. Create seed data script
-6. Test all endpoints
-7. Update frontend API base URL if needed
+- ✅ Full CRUD operations for Articles, Categories, Tags, Users, Roles
+- ✅ Article workflow (Draft → Submitted → Under Review → Approved/Rejected → Published)
+- ✅ JWT Authentication with refresh tokens
+- ✅ Role-based authorization (Admin, User)
+- ✅ Request logging middleware
+- ✅ Global exception handling
+- ✅ FluentValidation for all DTOs
+- ✅ Database seeding with admin user and roles
+- ✅ File upload service
+- ✅ Dashboard statistics
+- ✅ Logs management
 
 ## Notes
 

@@ -75,10 +75,9 @@ export function MetadataSidebar({ article, onUpdate, stats }: MetadataSidebarPro
       const base64 = await compressImage(file, 800);
       onUpdate({ featuredImage: base64 });
       toast.success(t('editor.featuredImageUploaded'));
-    } catch (error) {
-      console.error('Error uploading image:', error);
-      toast.error(t('editor.imageUploadFailed'));
-    } finally {
+      } catch (error) {
+        toast.error(t('editor.imageUploadFailed'));
+      } finally {
       setIsUploadingImage(false);
     }
   };
