@@ -1,0 +1,161 @@
+/* Responsive Design Utilities */
+
+/* Mobile First Approach */
+@media (max-width: 640px) {
+  /* Hide metadata sidebar on mobile */
+  .metadata-sidebar {
+    position: fixed;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .metadata-sidebar.open {
+    transform: translateX(0);
+  }
+
+  /* Stack editor vertically */
+  .editor-layout {
+    flex-direction: column;
+  }
+
+  /* Full width editor on mobile */
+  .editor-main {
+    width: 100%;
+  }
+
+  /* Adjust draft panel */
+  .draft-panel {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  /* Reduce padding on mobile */
+  .article-content {
+    padding: 1rem;
+  }
+
+  /* Smaller font sizes */
+  .prose {
+    font-size: 0.875rem;
+  }
+
+  .prose h1 {
+    font-size: 1.875rem;
+  }
+
+  .prose h2 {
+    font-size: 1.5rem;
+  }
+}
+
+/* Tablet */
+@media (min-width: 641px) and (max-width: 1024px) {
+  .metadata-sidebar {
+    width: 300px;
+  }
+
+  .draft-panel {
+    width: 280px;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1025px) {
+  .metadata-sidebar {
+    width: 384px;
+  }
+
+  .draft-panel {
+    width: 320px;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets */
+  button {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Prevent text selection on double tap */
+  .toolbar-button {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+}
+
+/* Print styles */
+@media print {
+  .toolbar-container,
+  .metadata-sidebar,
+  .draft-panel,
+  .action-buttons {
+    display: none !important;
+  }
+
+  .editor-main {
+    width: 100%;
+    max-width: 100%;
+  }
+
+  .article-content {
+    padding: 0;
+  }
+}
+
+/* Reduce motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode */
+@media (prefers-contrast: high) {
+  .border {
+    border-width: 2px;
+  }
+
+  button {
+    border: 2px solid currentColor;
+  }
+}
+
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground));
+}
+
+/* Focus visible for accessibility */
+*:focus-visible {
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+

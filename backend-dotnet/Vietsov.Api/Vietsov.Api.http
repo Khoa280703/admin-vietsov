@@ -1,0 +1,6 @@
+@Vietsov.Api_HostAddress = http://localhost:5125
+
+GET {{Vietsov.Api_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
