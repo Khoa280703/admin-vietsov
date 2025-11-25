@@ -114,8 +114,8 @@ _ReSharper*/
 *.sln.iml
 
 # .NET appsettings (chứa secrets)
-backend/appsettings.json
-backend/appsettings.Development.json
-backend/appsettings.Production.json
-backend/appsettings.*.json
-!backend/appsettings.example.json
+appsettings.json
+appsettings.Development.json
+appsettings.Production.json
+appsettings.*.json
+!appsettings.example.json

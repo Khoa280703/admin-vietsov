@@ -125,6 +125,12 @@ export function PreviewMode({ article }: PreviewModeProps) {
     ? article.categories[0].name 
     : article.category;
 
+  // Get author name - prefer authorName, fallback to author object
+  const authorName = article.authorName 
+    || (article.author && typeof article.author === 'object' 
+      ? article.author.fullName || article.author.username 
+      : article.author);
+
   return (
     <PreviewLayout
       title={article.title || "Untitled Article"}
@@ -136,7 +142,7 @@ export function PreviewMode({ article }: PreviewModeProps) {
           : undefined
       }
       excerpt={article.excerpt}
-      author={article.author}
+      author={authorName}
       featuredImage={article.featuredImage}
       editor={editor}
       tags={article.tags || []}
