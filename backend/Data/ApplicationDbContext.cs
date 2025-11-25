@@ -24,17 +24,16 @@ public class ApplicationDbContext : IdentityDbContext<ApplicationUser, Applicati
     {
         base.OnModelCreating(builder);
 
+        // Automatically apply ValueConverters to all enum properties
+        // This handles conversion between PascalCase (backend) and snake_case (database)
+        builder.ApplyEnumValueConverters();
+
         // Configure Article
         builder.Entity<Article>(entity =>
         {
             entity.HasIndex(e => e.Slug).IsUnique();
             entity.HasIndex(e => e.Status);
             entity.HasIndex(e => e.CreatedAt);
-            
-            // Configure Status to be stored as string in database (snake_case)
-            entity.Property(e => e.Status)
-                .HasConversion(new ArticleStatusValueConverter())
-                .HasMaxLength(50);
         });
 
         // Configure Category

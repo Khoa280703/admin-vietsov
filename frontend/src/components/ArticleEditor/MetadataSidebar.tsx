@@ -35,6 +35,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { TreeSelect } from "@/components/ui/tree-select";
 import {
   compressImage,
   isImageFile,
@@ -79,11 +80,31 @@ export function MetadataSidebar({
     Array<{ id: number; name: string; slug: string }>
   >([]);
   const [availableCategories, setAvailableCategories] = useState<
-    Array<{ id: number; name: string; slug: string }>
+    Array<{ id: number; name: string; slug: string; children?: Array<{ id: number; name: string; slug: string }> }>
   >([]);
   const [loadingTags, setLoadingTags] = useState(false);
   const [loadingCategories, setLoadingCategories] = useState(false);
   const [tagSearchTerm, setTagSearchTerm] = useState("");
+
+  // Flatten categories tree for display
+  const flattenCategories = (
+    categories: Array<{ id: number; name: string; slug: string; children?: Array<any> }>,
+    level = 0
+  ): Array<{ id: number; name: string; slug: string; displayName: string }> => {
+    const result: Array<{ id: number; name: string; slug: string; displayName: string }> = [];
+    for (const cat of categories) {
+      result.push({
+        id: cat.id,
+        name: cat.name,
+        slug: cat.slug,
+        displayName: "  ".repeat(level) + cat.name,
+      });
+      if (cat.children && cat.children.length > 0) {
+        result.push(...flattenCategories(cat.children, level + 1));
+      }
+    }
+    return result;
+  };
 
   // Fetch tags from API
   useEffect(() => {
@@ -373,29 +394,15 @@ export function MetadataSidebar({
         <CardContent
           className={cn("space-y-3", !openSections.categories && "hidden")}
         >
-          <Select
+          <TreeSelect
             value={article.categories?.[0]?.id?.toString() || ""}
-            onValueChange={(value) => {
-              const category = availableCategories.find(
-                (c) => c.id.toString() === value
-              );
-              if (category) {
-                onUpdate({ categories: [category] });
-              }
+            onValueChange={(value, node) => {
+              onUpdate({ categories: [{ id: node.id, name: node.name, slug: node.slug }] });
             }}
+            options={availableCategories}
+            placeholder={t("metadata.selectCategory", "Chọn danh mục")}
             disabled={loadingCategories}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder={t("metadata.selectCategory")} />
-            </SelectTrigger>
-            <SelectContent>
-              {availableCategories.map((cat) => (
-                <SelectItem key={cat.id} value={cat.id.toString()}>
-                  {cat.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          />
           {article.categories && article.categories.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {article.categories.map((cat) => (

@@ -1,5 +1,4 @@
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Data.SqlClient;
 using Vietsov.Api.Data;
 using Vietsov.Api.Models;
 using Vietsov.Api.Utils;
@@ -140,69 +139,30 @@ public class CategoryService : ICategoryService
             }
         }
 
-        // Insert category using raw SQL (to handle closure table)
-        var categoryIdParam = new SqlParameter("@categoryId", System.Data.SqlDbType.Int)
+        // Create category using EF Core
+        var category = new Category
         {
-            Direction = System.Data.ParameterDirection.Output
+            Name = data.Name,
+            Slug = slug,
+            Type = data.Type,
+            Description = data.Description,
+            ParentId = data.ParentId,
+            Order = data.Order,
+            IsActive = true,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow
         };
 
-        await _context.Database.ExecuteSqlRawAsync(
-            @"INSERT INTO Categories (Name, Slug, Type, Description, IsActive, [Order], ParentId, CreatedAt, UpdatedAt)
-              OUTPUT INSERTED.Id
-              VALUES (@name, @slug, @type, @description, @isActive, @order, @parentId, GETDATE(), GETDATE())",
-            new SqlParameter("@name", data.Name),
-            new SqlParameter("@slug", slug),
-            new SqlParameter("@type", (int)data.Type),
-            new SqlParameter("@description", (object?)data.Description ?? DBNull.Value),
-            new SqlParameter("@isActive", true),
-            new SqlParameter("@order", data.Order),
-            new SqlParameter("@parentId", (object?)data.ParentId ?? DBNull.Value)
-        );
-
-        // Get the inserted category ID
-        var insertedCategory = await _context.Categories
-            .OrderByDescending(c => c.Id)
-            .FirstOrDefaultAsync(c => c.Slug == slug);
-
-        if (insertedCategory == null)
-        {
-            throw new InvalidOperationException("Failed to retrieve created category");
-        }
-
-        var categoryId = insertedCategory.Id;
-
-        // Manually populate closure table
-        // Insert self-reference
-        await _context.Database.ExecuteSqlRawAsync(
-            @"INSERT INTO categories_closure (id_ancestor, id_descendant) VALUES (@id, @id)",
-            new SqlParameter("@id", categoryId)
-        );
-
-        // If has parent, insert all ancestor-descendant relationships
-        if (data.ParentId.HasValue)
-        {
-            await _context.Database.ExecuteSqlRawAsync(
-                @"INSERT INTO categories_closure (id_ancestor, id_descendant)
-                  SELECT cc.id_ancestor, @categoryId
-                  FROM categories_closure cc
-                  WHERE cc.id_descendant = @parentId",
-                new SqlParameter("@categoryId", categoryId),
-                new SqlParameter("@parentId", data.ParentId.Value)
-            );
-        }
+        _context.Categories.Add(category);
+        await _context.SaveChangesAsync();
 
         // Fetch the saved category with relations
         var savedCategory = await _context.Categories
             .Include(c => c.Parent)
             .Include(c => c.Children)
-            .FirstOrDefaultAsync(c => c.Id == categoryId);
+            .FirstOrDefaultAsync(c => c.Id == category.Id);
 
-        if (savedCategory == null)
-        {
-            throw new InvalidOperationException("Failed to retrieve created category");
-        }
-
-        return savedCategory;
+        return savedCategory ?? category;
     }
 
     public async Task<Category> UpdateCategoryAsync(int id, UpdateCategoryData data)
@@ -241,49 +201,11 @@ public class CategoryService : ICategoryService
                 throw new InvalidOperationException("Parent category not found");
             }
 
-            // Update closure table if parent changed
-            if (category.ParentId != data.ParentId.Value)
-            {
-                // Remove old relationships
-                await _context.Database.ExecuteSqlRawAsync(
-                    @"DELETE FROM categories_closure
-                      WHERE id_descendant IN (
-                          SELECT id_descendant FROM categories_closure WHERE id_ancestor = @id
-                      )
-                      AND id_ancestor IN (
-                          SELECT id_ancestor FROM categories_closure WHERE id_descendant = @id AND id_ancestor != @id
-                      )",
-                    new SqlParameter("@id", category.Id)
-                );
-
-                // Add new relationships
-                await _context.Database.ExecuteSqlRawAsync(
-                    @"INSERT INTO categories_closure (id_ancestor, id_descendant)
-                      SELECT supertree.id_ancestor, subtree.id_descendant
-                      FROM categories_closure AS supertree
-                      CROSS JOIN categories_closure AS subtree
-                      WHERE supertree.id_descendant = @newParentId
-                      AND subtree.id_ancestor = @id",
-                    new SqlParameter("@newParentId", data.ParentId.Value),
-                    new SqlParameter("@id", category.Id)
-                );
-            }
-
             category.ParentId = data.ParentId.Value;
         }
         else if (data.ParentId == null && category.ParentId.HasValue)
         {
             // Remove parent (make root)
-            await _context.Database.ExecuteSqlRawAsync(
-                @"DELETE FROM categories_closure
-                  WHERE id_descendant IN (
-                      SELECT id_descendant FROM categories_closure WHERE id_ancestor = @id
-                  )
-                  AND id_ancestor IN (
-                      SELECT id_ancestor FROM categories_closure WHERE id_descendant = @id AND id_ancestor != @id
-                  )",
-                new SqlParameter("@id", category.Id)
-            );
             category.ParentId = null;
         }
 
@@ -314,12 +236,6 @@ public class CategoryService : ICategoryService
         {
             throw new InvalidOperationException("Cannot delete category with children. Please delete or move children first.");
         }
-
-        // Delete from closure table
-        await _context.Database.ExecuteSqlRawAsync(
-            @"DELETE FROM categories_closure WHERE id_ancestor = @id OR id_descendant = @id",
-            new SqlParameter("@id", id)
-        );
 
         _context.Categories.Remove(category);
         await _context.SaveChangesAsync();

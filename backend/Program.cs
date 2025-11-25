@@ -29,9 +29,9 @@ builder.Host.UseSerilog();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        // Configure JSON serialization for ArticleStatus enum
-        options.JsonSerializerOptions.Converters.Add(new ArticleStatusJsonConverter());
-        options.JsonSerializerOptions.Converters.Add(new NullableArticleStatusJsonConverter());
+        // Automatically register JSON converters for all enum types in Models namespace
+        // This handles conversion between PascalCase (backend) and snake_case (frontend)
+        options.JsonSerializerOptions.RegisterAllEnumConverters();
         // Use camelCase for property names
         options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
     });
@@ -39,7 +39,12 @@ builder.Services.AddControllers()
 // Configure Entity Framework Core
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
-    options.UseSqlServer(connectionString));
+{
+    options.UseSqlServer(connectionString);
+    // Suppress pending model changes warning since we use automatic ValueConverter application
+    options.ConfigureWarnings(warnings =>
+        warnings.Ignore(Microsoft.EntityFrameworkCore.Diagnostics.RelationalEventId.PendingModelChangesWarning));
+});
 
 // Configure Data Protection (fixes XML encryptor warning)
 var dataProtectionKeysPath = Path.Combine(builder.Environment.ContentRootPath, "DataProtection-Keys");

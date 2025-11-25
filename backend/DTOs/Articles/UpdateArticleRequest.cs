@@ -17,7 +17,7 @@ public class UpdateArticleRequest
     public string? SeoTitle { get; set; }
     public string? SeoDescription { get; set; }
     public string? SeoKeywords { get; set; }
-    [JsonConverter(typeof(NullableArticleStatusJsonConverter))]
+    [JsonConverter(typeof(NullableSnakeCaseEnumJsonConverter<ArticleStatus>))]
     public ArticleStatus? Status { get; set; }
     public bool? IsFeatured { get; set; }
     public bool? IsBreakingNews { get; set; }

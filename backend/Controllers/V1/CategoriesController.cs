@@ -239,7 +239,33 @@ public class CategoriesController : ControllerBase
 
     private CategoryResponse MapToCategoryResponse(Category category)
     {
-        return new CategoryResponse
+        return MapToCategoryResponse(category, new HashSet<int>());
+    }
+
+    private CategoryResponse MapToCategoryResponse(Category category, HashSet<int> visited)
+    {
+        // Prevent circular reference by tracking visited categories
+        if (visited.Contains(category.Id))
+        {
+            // Return a minimal response to break the cycle
+            return new CategoryResponse
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Slug = category.Slug,
+                Type = category.Type,
+                ParentId = category.ParentId,
+                IsActive = category.IsActive,
+                Order = category.Order,
+                CreatedAt = category.CreatedAt,
+                UpdatedAt = category.UpdatedAt,
+                Children = new List<CategoryResponse>()
+            };
+        }
+
+        visited.Add(category.Id);
+
+        var response = new CategoryResponse
         {
             Id = category.Id,
             Name = category.Name,
@@ -247,13 +273,46 @@ public class CategoriesController : ControllerBase
             Type = category.Type,
             Description = category.Description,
             ParentId = category.ParentId,
-            Parent = category.Parent != null ? MapToCategoryResponse(category.Parent) : null,
-            Children = category.Children.Select(c => MapToCategoryResponse(c)).ToList(),
             IsActive = category.IsActive,
             Order = category.Order,
             CreatedAt = category.CreatedAt,
             UpdatedAt = category.UpdatedAt
         };
+
+        // Map parent (only basic info, no children or parent to avoid circular reference)
+        if (category.Parent != null && !visited.Contains(category.Parent.Id))
+        {
+            response.Parent = new CategoryResponse
+            {
+                Id = category.Parent.Id,
+                Name = category.Parent.Name,
+                Slug = category.Parent.Slug,
+                Type = category.Parent.Type,
+                Description = category.Parent.Description,
+                ParentId = category.Parent.ParentId,
+                IsActive = category.Parent.IsActive,
+                Order = category.Parent.Order,
+                CreatedAt = category.Parent.CreatedAt,
+                UpdatedAt = category.Parent.UpdatedAt,
+                Children = new List<CategoryResponse>() // Empty to avoid recursion
+            };
+        }
+
+        // Map children recursively (only if not already visited)
+        if (category.Children != null && category.Children.Any())
+        {
+            response.Children = category.Children
+                .Where(c => !visited.Contains(c.Id))
+                .Select(c => MapToCategoryResponse(c, visited))
+                .ToList();
+        }
+        else
+        {
+            response.Children = new List<CategoryResponse>();
+        }
+
+        visited.Remove(category.Id); // Remove after processing to allow same category in different branches
+        return response;
     }
 
     private int? GetCurrentUserId()
